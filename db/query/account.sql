@@ -19,7 +19,7 @@ OFFSET $2;
 
 -- name: UpdateAccount :one
 UPDATE accounts
-set currency = $2
+set balance = $2
 WHERE id = $1
 RETURNING *;
 
