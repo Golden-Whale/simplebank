@@ -17,7 +17,7 @@ ORDER BY id
 LIMIT $1
 OFFSET $2;
 
--- name: UpdateAuthor :one
+-- name: UpdateAccount :one
 UPDATE accounts
 set currency = $2
 WHERE id = $1
