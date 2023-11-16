@@ -2,7 +2,7 @@ package db
 
 import (
 	"context"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"log"
 	"os"
 	"testing"
@@ -13,21 +13,14 @@ const (
 	dbSource = "postgresql://root:123456@localhost:5432/simple_bank?sslmode=disable"
 )
 
-var testQueries *Queries
+var testStore *Store
 
 func TestMain(m *testing.M) {
-	conn, err := pgx.Connect(context.Background(), dbSource)
+	connPool, err := pgxpool.New(context.Background(), dbSource)
 	if err != nil {
 		log.Fatal("cannot connect to db:", err)
 	}
-	defer func(conn *pgx.Conn, ctx context.Context) {
-		err := conn.Close(ctx)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}(conn, context.Background())
 
-	testQueries = New(conn)
-
+	testStore = NewStore(connPool)
 	os.Exit(m.Run())
 }
