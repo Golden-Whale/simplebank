@@ -1,7 +1,9 @@
 package api
 
 import (
+	"errors"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 	"net/http"
 	db "simplebank/db/sqlc"
 )
@@ -43,6 +45,11 @@ func (server *Server) getAccount(c *gin.Context) {
 	}
 	account, err := server.store.GetAccount(c, req.ID)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
