@@ -7,20 +7,20 @@ import (
 	"os"
 	"simplebank/api"
 	db "simplebank/db/sqlc"
-)
-
-const (
-	dbSource = "postgresql://root:123456@localhost:5432/simple_bank?sslmode=disable"
-	address  = "127.0.0.1:8080"
+	"simplebank/utils"
 )
 
 func main() {
-	connPool, err := pgxpool.New(context.Background(), dbSource)
+	config, err := utils.LoadConfig(".")
+	if err != nil {
+		log.Fatal("cannot load config:", err)
+	}
+	connPool, err := pgxpool.New(context.Background(), config.DBSource)
 	if err != nil {
 		log.Fatal("cannot connect to db:", err)
 	}
 	store := db.NewStore(connPool)
 
 	server := api.NewServer(store)
-	os.IsNotExist(server.Start(address))
+	os.IsNotExist(server.Start(config.ServerAddress))
 }
