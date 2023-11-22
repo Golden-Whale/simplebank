@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"net/http"
 	db "simplebank/db/sqlc"
 )
@@ -26,7 +27,16 @@ func (server *Server) createAccount(c *gin.Context) {
 	}
 	account, err := server.store.CreateAccount(c, arg)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		var pgErr *pgconn.PgError
+
+		if errors.As(err, &pgErr) {
+			switch pgErr.ConstraintName {
+			case "owner_currency_key", "accounts_owner_fkey":
+				c.JSON(http.StatusForbidden, errorResponse(err))
+				return
+			}
+		}
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 	c.JSON(http.StatusOK, account)
