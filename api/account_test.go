@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -111,15 +112,16 @@ func TestCreateAccountAPI(t *testing.T) {
 
 	var testCases = []struct {
 		name          string
-		owner         string
-		currency      string
+		body          gin.H
 		buildStubs    func(store *mockdb.MockStore)
 		checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
 	}{
 		{
-			name:     "OK",
-			owner:    account.Owner,
-			currency: account.Currency,
+			name: "OK",
+			body: gin.H{
+				"owner":    account.Owner,
+				"currency": account.Currency,
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					CreateAccount(
@@ -135,9 +137,11 @@ func TestCreateAccountAPI(t *testing.T) {
 				requireBodyMatchAccount(t, recorder.Body, account)
 			},
 		}, {
-			name:     "InternalError",
-			owner:    account.Owner,
-			currency: account.Currency,
+			name: "InternalError",
+			body: gin.H{
+				"owner":    account.Owner,
+				"currency": account.Currency,
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					CreateAccount(
@@ -152,9 +156,11 @@ func TestCreateAccountAPI(t *testing.T) {
 				require.Equal(t, http.StatusInternalServerError, recorder.Code)
 			},
 		}, {
-			name:     "InvaldCurreny",
-			owner:    account.Owner,
-			currency: "CNY",
+			name: "InvaldCurreny",
+			body: gin.H{
+				"owner":    account.Owner,
+				"currency": "CNY",
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					CreateAccount(
@@ -165,9 +171,11 @@ func TestCreateAccountAPI(t *testing.T) {
 				require.Equal(t, http.StatusBadRequest, recorder.Code)
 			},
 		}, {
-			name:     "InvaldOwner",
-			owner:    "",
-			currency: account.Owner,
+			name: "InvaldOwner",
+			body: gin.H{
+				"owner":    "",
+				"currency": account.Currency,
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					CreateAccount(
@@ -179,8 +187,7 @@ func TestCreateAccountAPI(t *testing.T) {
 			},
 		},
 	}
-	for i := range testCases {
-		tc := testCases[i]
+	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
@@ -196,11 +203,7 @@ func TestCreateAccountAPI(t *testing.T) {
 
 			url := fmt.Sprintf("/accounts")
 			// 构造Json数据
-			req := createAccountRequest{
-				Owner:    tc.owner,
-				Currency: tc.currency,
-			}
-			jsonData, err := json.Marshal(req)
+			jsonData, err := json.Marshal(tc.body)
 			require.NoError(t, err)
 
 			request, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonData))
