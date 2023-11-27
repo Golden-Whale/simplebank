@@ -248,7 +248,7 @@ func TestTransferAPI(t *testing.T) {
 			tc.buildStubs(store)
 
 			// 生成 gin server
-			server := NewServer(store)
+			server := NewTestServer(t, store)
 
 			url := fmt.Sprintf("/transfers")
 

@@ -193,7 +193,7 @@ func TestCreateUserAPI(t *testing.T) {
 			tc.buildStubs(store)
 
 			// 开启gin服务
-			server := NewServer(store)
+			server := NewTestServer(t, store)
 
 			url := fmt.Sprintf("/users")
 			// 构造Json数据

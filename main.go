@@ -21,6 +21,9 @@ func main() {
 	}
 	store := db.NewStore(connPool)
 
-	server := api.NewServer(store)
+	server, err := api.NewServer(config, store)
+	if err != nil {
+		log.Fatal("cannot create server: %w", err)
+	}
 	os.IsNotExist(server.Start(config.ServerAddress))
 }
