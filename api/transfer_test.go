@@ -19,11 +19,14 @@ import (
 
 func TestTransferAPI(t *testing.T) {
 	amount := int64(10)
+	user1, _ := randomUser(t)
+	user2, _ := randomUser(t)
+	user3, _ := randomUser(t)
 
 	// 创建账号
-	account1 := randomAccount()
-	account2 := randomAccount()
-	account3 := randomAccount()
+	account1 := randomAccount(user1.Username)
+	account2 := randomAccount(user2.Username)
+	account3 := randomAccount(user3.Username)
 
 	account1.Currency = utils.USD
 	account2.Currency = utils.USD
@@ -269,13 +272,4 @@ func TestTransferAPI(t *testing.T) {
 		})
 	}
 
-}
-
-func randomTransfer(fromAccount, toAccount db.Account) db.Transfer {
-	return db.Transfer{
-		ID:            utils.RandomInt(1, 1000),
-		FromAccountID: fromAccount.ID,
-		ToAccountID:   toAccount.ID,
-		Amount:        utils.RandomMoney(),
-	}
 }

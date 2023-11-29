@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"net/http"
 	db "simplebank/db/sqlc"
+	"simplebank/token"
 )
 
 type transferRequest struct {
@@ -22,12 +23,19 @@ func (server *Server) CreateTransfer(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
-
-	if !server.validAccount(c, req.FromAccountID, req.Currency) {
+	fromAccount, valid := server.validAccount(c, req.FromAccountID, req.Currency)
+	if !valid {
+		return
+	}
+	authPayload := c.MustGet(autuorzationPayloadKey).(token.Payload)
+	if fromAccount.Owner != authPayload.Username {
+		err := errors.New("from account doesn't belong the authenticated user")
+		c.JSON(http.StatusUnauthorized, errorResponse(err))
 		return
 	}
 
-	if !server.validAccount(c, req.ToAccountID, req.Currency) {
+	_, valid = server.validAccount(c, req.FromAccountID, req.Currency)
+	if !valid {
 		return
 	}
 
@@ -45,21 +53,21 @@ func (server *Server) CreateTransfer(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-func (server *Server) validAccount(c *gin.Context, accountId int64, currency string) bool {
+func (server *Server) validAccount(c *gin.Context, accountId int64, currency string) (db.Account, bool) {
 	account, err := server.store.GetAccount(c, accountId)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			c.JSON(http.StatusNotFound, errorResponse(err))
-			return false
+			return account, false
 		}
 		c.JSON(http.StatusInternalServerError, errorResponse(err))
-		return false
+		return account, false
 	}
 
 	if account.Currency != currency {
 		err := fmt.Errorf("account [%d] currency mismatch: %s vs %s", accountId, account.Currency, currency)
 		c.JSON(http.StatusBadRequest, errorResponse(err))
-		return false
+		return account, false
 	}
-	return true
+	return account, true
 }

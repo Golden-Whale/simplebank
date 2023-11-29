@@ -7,10 +7,10 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"net/http"
 	db "simplebank/db/sqlc"
+	"simplebank/token"
 )
 
 type createAccountRequest struct {
-	Owner    string `json:"owner" binding:"required"`
 	Currency string `json:"currency" binding:"required,oneof=EUR USD CAD"`
 }
 
@@ -20,8 +20,10 @@ func (server *Server) createAccount(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
+	authPayload := c.MustGet(autuorzationPayloadKey).(token.Payload)
+
 	arg := db.CreateAccountParams{
-		Owner:    req.Owner,
+		Owner:    authPayload.Username,
 		Balance:  0,
 		Currency: req.Currency,
 	}
@@ -60,9 +62,15 @@ func (server *Server) getAccount(c *gin.Context) {
 			return
 		}
 
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
+	authPayload := c.MustGet(autuorzationPayloadKey).(token.Payload)
+	if account.Owner != authPayload.Username {
+		err := errors.New("acctoun doesn't belong to the authenticated user")
+		c.JSON(http.StatusUnauthorized, errorResponse(err))
+	}
+
 	c.JSON(http.StatusOK, account)
 	return
 }
@@ -78,14 +86,17 @@ func (server *Server) listAccount(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
+	authPayload := c.MustGet(autuorzationPayloadKey).(token.Payload)
+
 	arg := db.ListAccountsParams{
+		Owner:  authPayload.Username,
 		Limit:  req.PageSize,
 		Offset: (req.PageID - 1) * req.PageSize,
 	}
 
 	account, err := server.store.ListAccounts(c, arg)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 	c.JSON(http.StatusOK, account)
