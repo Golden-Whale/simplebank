@@ -34,7 +34,7 @@ func (server *Server) CreateTransfer(c *gin.Context) {
 		return
 	}
 
-	_, valid = server.validAccount(c, req.FromAccountID, req.Currency)
+	_, valid = server.validAccount(c, req.ToAccountID, req.Currency)
 	if !valid {
 		return
 	}
