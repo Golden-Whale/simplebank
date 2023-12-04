@@ -1,0 +1,28 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_SOURCE=postgresql://root:123456@postgres:5432/simple_bank?sslmode=disable
+      - SERVER_ADDRESS=0.0.0.0:8080
+      - TOKEN_SYMETRIC_KEY=1234567890abcdefghijklmnopqrsssk
+      - ACCESS_TOKEN_DURATION=15m
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:12-alpine
+    environment:
+      - POSTGRES_PASSWORD=123456
+      - POSTGRES_USER=root
+      - POSTGRES_DB=simple_bank
+    healthcheck:
+      test: "psql simple_bank -c \"SELECT table_name FROM information_schema.tables WHERE table_schema='public';\""
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
