@@ -9,7 +9,8 @@ import (
 // The value are read by viper from a config file or environment variables.
 type Config struct {
 	DBSource             string        `mapstructure:"DB_SOURCE"`
-	ServerAddress        string        `mapstructure:"SERVER_ADDRESS"`
+	HTTPServerAddress    string        `mapstructure:"HTTP_SERVER_ADDRESS"`
+	GRPCServerAddress    string        `mapstructure:"Grpc_SERVER_ADDRESS"`
 	TokenSysmetricKey    string        `mapstructure:"TOKEN_SYSMETRIC_KEY"`
 	AccessTokenDuration  time.Duration `mapstructure:"ACCESS_TOKEN_DURATION"`
 	RefreshTokenDuration time.Duration `mapstructure:"REFRESH_TOKEN_DURATION"`
