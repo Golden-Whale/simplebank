@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -240,6 +239,7 @@ func TestLoginUserAPI(t *testing.T) {
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().GetUser(gomock.Any(), gomock.Eq(user.Username)).
 					Times(1).Return(user, nil)
+				store.EXPECT().CreateSession(gomock.Any(), gomock.Any()).Times(1)
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, recorder.Code)
@@ -271,7 +271,7 @@ func TestLoginUserAPI(t *testing.T) {
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().GetUser(gomock.Any(), gomock.Any()).
 					Times(1).
-					Return(db.User{}, pgx.ErrNoRows)
+					Return(db.User{}, sql.ErrNoRows)
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusNotFound, recorder.Code)
@@ -285,14 +285,15 @@ func TestLoginUserAPI(t *testing.T) {
 				"password": "incorrect",
 			},
 			buildStubs: func(store *mockdb.MockStore) {
-				store.EXPECT().GetUser(gomock.Any(), gomock.Eq(user.Username)).
-					Times(1).Return(user, nil)
+				store.EXPECT().GetUser(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return(user, nil)
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusUnauthorized, recorder.Code)
 			},
 		},
-		// 用户名无效
+    // 无效的用户名
 		{
 			name: "InvalidUsername",
 			body: gin.H{
@@ -307,12 +308,12 @@ func TestLoginUserAPI(t *testing.T) {
 				require.Equal(t, http.StatusBadRequest, recorder.Code)
 			},
 		},
-		// 密码无效
+		// 无效的密码
 		{
 			name: "InvalidPassword",
 			body: gin.H{
 				"username": user.Username,
-				"password": "a",
+				"password": "123",
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().GetUser(gomock.Any(), gomock.Any()).
