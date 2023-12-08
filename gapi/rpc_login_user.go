@@ -63,7 +63,7 @@ func (server *Server) LoginUser(c context.Context, req *pb.LoginUserRequest) (*p
 			PasswordChanageAt: timestamppb.New(user.PasswordChangedAt.Time),
 			CreatedAt:         timestamppb.New(user.CreatedAt.Time),
 		},
-		SessionId:             fmt.Sprintf("%x", session.ID),
+		SessionId:             fmt.Sprintf("%x", session.ID.Bytes),
 		AccessToken:           accessToken,
 		AccessTokenExpiresAt:  timestamppb.New(accessPayload.ExpiredAt),
 		RefreshToken:          refreshToken,
