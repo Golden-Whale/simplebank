@@ -13,14 +13,15 @@ type JwtMaker struct {
 	secreKey string
 }
 
-func (j JwtMaker) CreateToken(username string, duration time.Duration) (string, error) {
+func (j JwtMaker) CreateToken(username string, duration time.Duration) (string, *Payload, error) {
 	payload, err := NewPayload(username, duration)
 	if err != nil {
-		return "", err
+		return "", payload, err
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, payload)
 
-	return token.SignedString([]byte(j.secreKey))
+	jwtToken, err := token.SignedString([]byte(j.secreKey))
+	return jwtToken, payload, err
 }
 
 func (j JwtMaker) VerifyToken(token string) (*Payload, error) {

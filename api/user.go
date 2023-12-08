@@ -1,10 +1,12 @@
 package api
 
 import (
+	"database/sql"
 	"errors"
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 	"net/http"
 	db "simplebank/db/sqlc"
 	"simplebank/utils"
@@ -79,8 +81,13 @@ type loginUserRequest struct {
 }
 
 type loginUserResponse struct {
-	AccessToken string       `json:"access_token"`
-	User        UserResponse `json:"user"`
+	SessionID             uuid.UUID `json:"session_id"`
+	AccessToken           string    `json:"access_token"`
+	AccessTokenExpiresAt  time.Time `json:"access_token_expires_at"`
+	RefreshToken          string    `json:"refresh_token"`
+	RefreshTokenExpiresAt time.Time `json:"refresh_token_expires_at"`
+
+	User UserResponse `json:"user"`
 }
 
 func (server *Server) loginUser(c *gin.Context) {
@@ -92,7 +99,7 @@ func (server *Server) loginUser(c *gin.Context) {
 
 	user, err := server.store.GetUser(c, req.Username)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			c.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -105,14 +112,44 @@ func (server *Server) loginUser(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, errorResponse(err))
 		return
 	}
-	accessToken, err := server.tokenMaker.CreateToken(user.Username, server.config.AccessTokenDuration)
+	accessToken, accessPayload, err := server.tokenMaker.CreateToken(user.Username, server.config.AccessTokenDuration)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
+	refreshToken, refreshOPayload, err := server.tokenMaker.CreateToken(user.Username, server.config.RefreshTokenDuration)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	session, err := server.store.CreateSession(c, db.CreateSessionParams{
+		ID: pgtype.UUID{
+			Bytes: refreshOPayload.ID,
+			Valid: true,
+		},
+		Username:     user.Username,
+		RefreshToken: refreshToken,
+		UserAgent:    c.Request.UserAgent(),
+		IsBlocked:    false,
+		ClientIp:     c.ClientIP(),
+		ExpiresAt: pgtype.Timestamptz{
+			Time:  refreshOPayload.ExpiredAt,
+			Valid: true,
+		},
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
 	rsp := loginUserResponse{
-		AccessToken: accessToken,
-		User:        newUserResponse(user),
+		SessionID:             session.ID.Bytes,
+		AccessToken:           accessToken,
+		AccessTokenExpiresAt:  accessPayload.ExpiredAt,
+		RefreshToken:          refreshToken,
+		RefreshTokenExpiresAt: refreshOPayload.ExpiredAt,
+		User:                  newUserResponse(user),
 	}
 	c.JSON(http.StatusOK, rsp)
 
