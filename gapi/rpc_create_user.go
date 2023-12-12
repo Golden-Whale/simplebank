@@ -30,7 +30,7 @@ func (server *Server) CreateUser(c context.Context, req *pb.CreateUserRequest) (
 		if errors.As(err, &pgErr) {
 			switch pgErr.ConstraintName {
 			case "users_pkey", "users_email_key":
-				return nil, status.Errorf(codes.AlreadyExists, "username already exists")
+				return nil, status.Errorf(codes.AlreadyExists, err.Error())
 			}
 		}
 		return nil, status.Errorf(codes.Internal, "cannot create user: %s", err)
