@@ -42,6 +42,9 @@ proto:
 		--go_out=pb \
 		--go-grpc_out=pb \
 		--go_opt=paths=source_relative \
+		 --grpc-gateway_out=pb \
+		 --grpc-gateway_opt paths=source_relative \
+		 --grpc-gateway_opt generate_unbound_methods=true \
 		--go-grpc_opt=paths=source_relative proto/*.proto
 
 evans:
